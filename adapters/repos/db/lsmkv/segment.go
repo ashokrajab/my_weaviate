@@ -14,10 +14,11 @@ package lsmkv
 import (
 	"bytes"
 	"fmt"
+	"os"
+
 	"github.com/sirupsen/logrus"
 	"github.com/weaviate/weaviate/adapters/repos/db/lsmkv/segmentindex"
 	"github.com/willf/bloom"
-	"os"
 )
 
 type segment struct {
