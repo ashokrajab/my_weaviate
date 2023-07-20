@@ -5,12 +5,10 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 )
 
-// type compressor struct{}
 type zip struct {
 	sourcePath string
 	gzw        *gzip.Writer
@@ -26,16 +24,18 @@ func NewZip(sourcePath string, w io.Writer) zip {
 	}
 }
 
-func (z *zip) Close() (err error) {
+func (z *zip) Close() error {
+	var err1, err2 error
 	if z.w != nil {
-		err = z.w.Close()
+		err1 = z.w.Close()
 		z.w = nil
-		return
 	}
 	if z.gzw != nil {
-		err = z.gzw.Close()
+		err2 = z.gzw.Close()
 		z.gzw = nil
-		return
+	}
+	if err1 != nil || err2 != nil {
+		return fmt.Errorf("tar: %w, gzip: %w", err1, err2)
 	}
 	return nil
 }
@@ -62,6 +62,7 @@ func (z *zip) WriteRegular(relPath string) (written int64, err error) {
 		return written, fmt.Errorf("file header: %w", err)
 	}
 	header.Name = relPath
+	header.ChangeTime = info.ModTime()
 	if err := z.w.WriteHeader(header); err != nil {
 		return written, fmt.Errorf("write header %s: %w", relPath, err)
 	}
@@ -146,7 +147,7 @@ func (u *unzip) ReadRegulars() (written int64, err error) {
 				}
 			}
 			fmt.Println("+", target)
-			n, err := copyFile(target, os.FileMode(header.Mode), u.r)
+			n, err := copyFile(target, header, u.r)
 			if err != nil {
 				return written, fmt.Errorf("copy file %s: %w", target, err)
 			}
@@ -155,8 +156,8 @@ func (u *unzip) ReadRegulars() (written int64, err error) {
 	}
 }
 
-func copyFile(target string, perm fs.FileMode, r io.Reader) (written int64, err error) {
-	f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, perm)
+func copyFile(target string, h *tar.Header, r io.Reader) (written int64, err error) {
+	f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(h.Mode))
 	if err != nil {
 		return written, fmt.Errorf("create: %w", err)
 	}
