@@ -16,18 +16,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCallbacks_Multi(t *testing.T) {
 	ctx := context.Background()
+	logger, _ := test.NewNullLogger()
 
 	t.Run("no callbacks", func(t *testing.T) {
 		ch := make(chan struct{}, 1)
 		var executed bool
 
-		callbacks := newMultiCallbacks()
+		callbacks := newMultiCallbacks(logger)
 
 		go func() {
 			executed = callbacks.execute(func() bool { return false })
@@ -55,9 +57,9 @@ func TestCallbacks_Multi(t *testing.T) {
 		var executed bool
 		var d time.Duration
 
-		callbacks := newMultiCallbacks()
-		callbacks.register(callback1)
-		callbacks.register(callback2)
+		callbacks := newMultiCallbacks(logger)
+		callbacks.register("c1", callback1)
+		callbacks.register("c2", callback2)
 
 		go func() {
 			start := time.Now()
@@ -90,9 +92,9 @@ func TestCallbacks_Multi(t *testing.T) {
 		var executed bool
 		var d time.Duration
 
-		callbacks := newMultiCallbacks()
-		callbacks.register(callback1)
-		callbacks.register(callback2)
+		callbacks := newMultiCallbacks(logger)
+		callbacks.register("c1", callback1)
+		callbacks.register("c2", callback2)
 
 		go func() {
 			start := time.Now()
@@ -119,8 +121,8 @@ func TestCallbacks_Multi(t *testing.T) {
 		var executed bool
 		var d time.Duration
 
-		callbacks := newMultiCallbacks()
-		unregister := callbacks.register(callback1)
+		callbacks := newMultiCallbacks(logger)
+		unregister := callbacks.register("c1", callback1)
 		require.Nil(t, unregister(ctx))
 
 		go func() {
@@ -153,9 +155,9 @@ func TestCallbacks_Multi(t *testing.T) {
 		var executed bool
 		var d time.Duration
 
-		callbacks := newMultiCallbacks()
-		unregister1 := callbacks.register(callback1)
-		unregister2 := callbacks.register(callback2)
+		callbacks := newMultiCallbacks(logger)
+		unregister1 := callbacks.register("c1", callback1)
+		unregister2 := callbacks.register("c2", callback2)
 		require.Nil(t, unregister1(ctx))
 		require.Nil(t, unregister2(ctx))
 
@@ -190,9 +192,9 @@ func TestCallbacks_Multi(t *testing.T) {
 		var executed bool
 		var d time.Duration
 
-		callbacks := newMultiCallbacks()
-		unregister1 := callbacks.register(callback1)
-		callbacks.register(callback2)
+		callbacks := newMultiCallbacks(logger)
+		unregister1 := callbacks.register("c1", callback1)
+		callbacks.register("c2", callback2)
 		require.Nil(t, unregister1(ctx))
 
 		go func() {
@@ -244,11 +246,11 @@ func TestCallbacks_Multi(t *testing.T) {
 		var d3 time.Duration
 		var d4 time.Duration
 
-		callbacks := newMultiCallbacks()
-		unregister1 := callbacks.register(callback1)
-		unregister2 := callbacks.register(callback2)
-		unregister3 := callbacks.register(callback3)
-		unregister4 := callbacks.register(callback4)
+		callbacks := newMultiCallbacks(logger)
+		unregister1 := callbacks.register("c1", callback1)
+		unregister2 := callbacks.register("c2", callback2)
+		unregister3 := callbacks.register("c3", callback3)
+		unregister4 := callbacks.register("c4", callback4)
 		require.Nil(t, unregister3(ctx))
 
 		go func() {
@@ -328,9 +330,9 @@ func TestCallbacks_Multi(t *testing.T) {
 		var d1 time.Duration
 		var d2 time.Duration
 
-		callbacks := newMultiCallbacks()
-		callbacks.register(callback1)
-		callbacks.register(callback2)
+		callbacks := newMultiCallbacks(logger)
+		callbacks.register("c1", callback1)
+		callbacks.register("c2", callback2)
 
 		go func() {
 			start := time.Now()
@@ -367,8 +369,8 @@ func TestCallbacks_Multi(t *testing.T) {
 		var executed bool
 		var d time.Duration
 
-		callbacks := newMultiCallbacks()
-		unregister := callbacks.register(callback)
+		callbacks := newMultiCallbacks(logger)
+		unregister := callbacks.register("c", callback)
 
 		go func() {
 			chStarted <- struct{}{}
@@ -404,8 +406,8 @@ func TestCallbacks_Multi(t *testing.T) {
 		var d1 time.Duration
 		var d2 time.Duration
 
-		callbacks := newMultiCallbacks()
-		unregister := callbacks.register(callback)
+		callbacks := newMultiCallbacks(logger)
+		unregister := callbacks.register("c", callback)
 
 		go func() {
 			chStarted <- struct{}{}
@@ -458,8 +460,8 @@ func TestCallbacks_Multi(t *testing.T) {
 		var executed bool
 		var d time.Duration
 
-		callbacks := newMultiCallbacks()
-		callbacks.register(callback1)
+		callbacks := newMultiCallbacks(logger)
+		callbacks.register("c1", callback1)
 
 		go func() {
 			chStarted <- struct{}{}
@@ -470,7 +472,7 @@ func TestCallbacks_Multi(t *testing.T) {
 		}()
 		<-chStarted
 		time.Sleep(25 * time.Millisecond)
-		callbacks.register(callback2)
+		callbacks.register("c2", callback2)
 		<-chFinished
 
 		assert.True(t, executed)
@@ -503,10 +505,10 @@ func TestCallbacks_Multi(t *testing.T) {
 		var executed bool
 		var d time.Duration
 
-		callbacks := newMultiCallbacks()
-		callbacks.register(callback1)
-		unregister2 := callbacks.register(callback2)
-		unregister3 := callbacks.register(callback3)
+		callbacks := newMultiCallbacks(logger)
+		callbacks.register("c1", callback1)
+		unregister2 := callbacks.register("c2", callback2)
+		unregister3 := callbacks.register("c3", callback3)
 
 		go func() {
 			chStarted <- struct{}{}

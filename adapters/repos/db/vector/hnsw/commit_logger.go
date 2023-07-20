@@ -66,8 +66,8 @@ func NewCommitLogger(rootPath, name string, logger logrus.FieldLogger,
 	}
 
 	l.commitLogger = commitlog.NewLoggerWithFile(fd)
-	l.unregisterSwitchLogs = maintenanceCycle.Register(l.startSwitchLogs)
-	l.unregisterCondenseLogs = maintenanceCycle.Register(l.startCombineAndCondenseLogs)
+	l.unregisterSwitchLogs = maintenanceCycle.Register("switchLogs_"+l.id, l.startSwitchLogs)
+	l.unregisterCondenseLogs = maintenanceCycle.Register("condenseLogs_"+l.id, l.startCombineAndCondenseLogs)
 
 	return l, nil
 }

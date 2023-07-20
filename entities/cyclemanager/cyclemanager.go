@@ -15,6 +15,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 type (
@@ -26,7 +28,7 @@ type (
 )
 
 type CycleManager interface {
-	Register(cycleFunc CycleFunc) UnregisterFunc
+	Register(name string, cycleFunc CycleFunc) UnregisterFunc
 	Start()
 	Stop(ctx context.Context) chan bool
 	StopAndWait(ctx context.Context) error
@@ -36,6 +38,7 @@ type CycleManager interface {
 type cycleManager struct {
 	sync.RWMutex
 
+	logger      logrus.FieldLogger
 	callbacks   callbacks
 	cycleTicker CycleTicker
 	running     bool
@@ -45,17 +48,18 @@ type cycleManager struct {
 	stopResults  []chan bool
 }
 
-func NewMulti(cycleTicker CycleTicker) CycleManager {
+func NewMulti(cycleTicker CycleTicker, logger logrus.FieldLogger) CycleManager {
 	return &cycleManager{
-		callbacks:   newMultiCallbacks(),
+		logger:      logger,
+		callbacks:   newMultiCallbacks(logger),
 		cycleTicker: cycleTicker,
 		running:     false,
 		stopSignal:  make(chan struct{}, 1),
 	}
 }
 
-func (c *cycleManager) Register(cycleFunc CycleFunc) UnregisterFunc {
-	return c.callbacks.register(cycleFunc)
+func (c *cycleManager) Register(name string, cycleFunc CycleFunc) UnregisterFunc {
+	return c.callbacks.register(name, cycleFunc)
 }
 
 // Starts instance, does not block
@@ -205,7 +209,7 @@ type noopCycleManager struct {
 	running bool
 }
 
-func (c *noopCycleManager) Register(cycleFunc CycleFunc) UnregisterFunc {
+func (c *noopCycleManager) Register(name string, cycleFunc CycleFunc) UnregisterFunc {
 	return func(ctx context.Context) error {
 		return nil
 	}

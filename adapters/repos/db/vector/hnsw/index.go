@@ -250,7 +250,6 @@ func New(cfg Config, uc ent.UserConfig, tombstoneCleanupCycle cyclemanager.Cycle
 		resetCtx:               resetCtx,
 		resetCtxCancel:         resetCtxCancel,
 		initialInsertOnce:      &sync.Once{},
-		// cleanupInterval:        time.Duration(uc.CleanupIntervalSeconds) * time.Second,
 
 		ef:       int64(uc.EF),
 		efMin:    int64(uc.DynamicEFMin),
@@ -269,7 +268,7 @@ func New(cfg Config, uc ent.UserConfig, tombstoneCleanupCycle cyclemanager.Cycle
 	}
 
 	// TODO common_cycle_manager move to poststartup?
-	index.unregisterTombstoneCleanup = tombstoneCleanupCycle.Register(index.tombstoneCleanup)
+	index.unregisterTombstoneCleanup = tombstoneCleanupCycle.Register("tombstoneCleanup_"+index.id, index.tombstoneCleanup)
 	index.insertMetrics = newInsertMetrics(index.metrics)
 
 	if err := index.init(cfg); err != nil {

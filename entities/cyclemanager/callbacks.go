@@ -14,16 +14,19 @@ package cyclemanager
 import (
 	"context"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 type UnregisterFunc func(ctx context.Context) error
 
 type callbacks interface {
-	register(cycleFunc CycleFunc) UnregisterFunc
+	register(name string, cycleFunc CycleFunc) UnregisterFunc
 	execute(shouldBreak ShouldBreakFunc) bool
 }
 
 type callbackState struct {
+	name      string
 	cycleFunc CycleFunc
 	// indicates whether callback is already running - context active
 	// or not running (already finished) - context expired
@@ -32,28 +35,31 @@ type callbackState struct {
 }
 
 type multiCallbacks struct {
-	lock    *sync.Mutex
+	sync.Mutex
+
+	logger  logrus.FieldLogger
 	counter uint32
 	states  map[uint32]*callbackState
 	keys    []uint32
 }
 
-func newMultiCallbacks() callbacks {
+func newMultiCallbacks(logger logrus.FieldLogger) callbacks {
 	return &multiCallbacks{
-		lock:    new(sync.Mutex),
+		logger:  logger,
 		counter: 0,
 		states:  map[uint32]*callbackState{},
 		keys:    []uint32{},
 	}
 }
 
-func (c *multiCallbacks) register(cycleFunc CycleFunc) UnregisterFunc {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+func (c *multiCallbacks) register(name string, cycleFunc CycleFunc) UnregisterFunc {
+	c.Lock()
+	defer c.Unlock()
 
 	key := c.counter
 	c.keys = append(c.keys, key)
 	c.states[key] = &callbackState{
+		name:       name,
 		cycleFunc:  cycleFunc,
 		runningCtx: nil,
 	}
@@ -67,19 +73,19 @@ func (c *multiCallbacks) register(cycleFunc CycleFunc) UnregisterFunc {
 func (c *multiCallbacks) unregister(ctx context.Context, key uint32) error {
 	for {
 		// remove callback from collection only if not running (not yet started of finished)
-		c.lock.Lock()
+		c.Lock()
 		state, ok := c.states[key]
 		if !ok {
-			c.lock.Unlock()
+			c.Unlock()
 			return nil
 		}
 		runningCtx := state.runningCtx
 		if runningCtx == nil || runningCtx.Err() != nil {
 			delete(c.states, key)
-			c.lock.Unlock()
+			c.Unlock()
 			return nil
 		}
-		c.lock.Unlock()
+		c.Unlock()
 
 		// wait for callback to finish
 		select {
@@ -109,9 +115,9 @@ func (c *multiCallbacks) execute(shouldBreak ShouldBreakFunc) bool {
 			break
 		}
 
-		c.lock.Lock()
+		c.Lock()
 		if i >= len(c.keys) {
-			c.lock.Unlock()
+			c.Unlock()
 			break
 		}
 
@@ -119,16 +125,26 @@ func (c *multiCallbacks) execute(shouldBreak ShouldBreakFunc) bool {
 		state, ok := c.states[key]
 		if !ok { // callback deleted in the meantime, adjust keys and move to the next one
 			c.keys = append(c.keys[:i], c.keys[i+1:]...)
-			c.lock.Unlock()
+			c.Unlock()
 			continue
 		}
 
 		runningCtx, cancel := context.WithCancel(context.Background())
 		state.runningCtx = runningCtx
 		i++
-		c.lock.Unlock()
+		c.Unlock()
 
-		executed = state.cycleFunc(shouldBreak) || executed
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					c.logger.WithFields(logrus.Fields{
+						"action":   "cyclemanager",
+						"callback": state.name,
+					}).Errorf("callback panic: %v", r)
+				}
+			}()
+			executed = state.cycleFunc(shouldBreak) || executed
+		}()
 		cancel()
 	}
 

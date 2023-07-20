@@ -99,8 +99,8 @@ func NewShard(ctx context.Context, promMetrics *monitoring.PrometheusMetrics,
 		stopMetrics:     make(chan struct{}),
 		replicationMap:  pendingReplicaTasks{Tasks: make(map[string]replicaTask, 32)},
 		centralJobQueue: jobQueueCh,
-		vectorCycles:    &hnsw.MaintenanceCycles{},
-		geoPropsCycles:  &hnsw.MaintenanceCycles{},
+		vectorCycles:    hnsw.NewMaintenanceCycles(index.logger),
+		geoPropsCycles:  hnsw.NewMaintenanceCycles(index.logger),
 	}
 
 	s.docIdLock = make([]sync.Mutex, IdLockPoolSize)

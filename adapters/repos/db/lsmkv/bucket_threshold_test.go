@@ -40,7 +40,7 @@ func TestWriteAheadLogThreshold_Replace(t *testing.T) {
 	walThreshold := uint64(4096)
 	tolerance := 4.
 
-	flushCycle := cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker())
+	flushCycle := cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker(), nullLogger())
 	flushCycle.Start()
 
 	bucket, err := NewBucket(testCtx(), dirName, "", nullLogger(), nil,
@@ -141,7 +141,7 @@ func TestMemtableThreshold_Replace(t *testing.T) {
 	memtableThreshold := uint64(4096)
 	tolerance := 4.
 
-	flushCycle := cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker())
+	flushCycle := cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker(), nullLogger())
 	flushCycle.Start()
 
 	bucket, err := NewBucket(testCtx(), dirName, "", nullLogger(), nil,
@@ -233,7 +233,7 @@ func TestMemtableFlushesIfIdle(t *testing.T) {
 	t.Run("an empty memtable is not flushed", func(t *testing.T) {
 		dirName := t.TempDir()
 
-		flushCycle := cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker())
+		flushCycle := cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker(), nullLogger())
 		flushCycle.Start()
 
 		bucket, err := NewBucket(testCtx(), dirName, "", nullLogger(), nil,
@@ -276,7 +276,7 @@ func TestMemtableFlushesIfIdle(t *testing.T) {
 	t.Run("a dirty memtable is flushed once the idle period is over", func(t *testing.T) {
 		dirName := t.TempDir()
 
-		flushCycle := cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker())
+		flushCycle := cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker(), nullLogger())
 		flushCycle.Start()
 
 		bucket, err := NewBucket(testCtx(), dirName, "", nullLogger(), nil,
@@ -323,7 +323,7 @@ func TestMemtableFlushesIfIdle(t *testing.T) {
 	t.Run("a dirty memtable is not flushed as long as the next write occurs before the idle threshold", func(t *testing.T) {
 		dirName := t.TempDir()
 
-		flushCycle := cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker())
+		flushCycle := cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker(), nullLogger())
 		flushCycle.Start()
 
 		bucket, err := NewBucket(testCtx(), dirName, "", nullLogger(), nil,

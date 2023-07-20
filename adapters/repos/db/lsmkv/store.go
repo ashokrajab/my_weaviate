@@ -54,8 +54,8 @@ func New(dir, rootDir string, logger logrus.FieldLogger,
 		bucketsByName:   map[string]*Bucket{},
 		logger:          logger,
 		metrics:         metrics,
-		compactionCycle: cyclemanager.NewMulti(cyclemanager.CompactionCycleTicker()),
-		flushCycle:      cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker()),
+		compactionCycle: cyclemanager.NewMulti(cyclemanager.CompactionCycleTicker(), logger),
+		flushCycle:      cyclemanager.NewMulti(cyclemanager.MemtableFlushCycleTicker(), logger),
 	}
 
 	return s, s.init()

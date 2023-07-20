@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -62,6 +63,7 @@ func newProviderBreakable(cycleDuration time.Duration, resultsSize uint, breaks 
 }
 
 func TestCycleManager_beforeTimeout(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 5 * time.Millisecond
 	cycleDuration := 1 * time.Millisecond
 	stopTimeout := 12 * time.Millisecond
@@ -70,8 +72,8 @@ func TestCycleManager_beforeTimeout(t *testing.T) {
 	var cm CycleManager
 
 	t.Run("create new", func(t *testing.T) {
-		cm = NewMulti(NewFixedIntervalTicker(cycleInterval))
-		cm.Register(p.cycleFunc)
+		cm = NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+		cm.Register("cf", p.cycleFunc)
 
 		assert.False(t, cm.Running())
 	})
@@ -101,6 +103,7 @@ func TestCycleManager_beforeTimeout(t *testing.T) {
 }
 
 func TestCycleManager_beforeTimeoutWithWait(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 5 * time.Millisecond
 	cycleDuration := 1 * time.Millisecond
 	stopTimeout := 12 * time.Millisecond
@@ -109,8 +112,8 @@ func TestCycleManager_beforeTimeoutWithWait(t *testing.T) {
 	var cm CycleManager
 
 	t.Run("create new", func(t *testing.T) {
-		cm = NewMulti(NewFixedIntervalTicker(cycleInterval))
-		cm.Register(p.cycleFunc)
+		cm = NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+		cm.Register("cf", p.cycleFunc)
 
 		assert.False(t, cm.Running())
 	})
@@ -135,13 +138,14 @@ func TestCycleManager_beforeTimeoutWithWait(t *testing.T) {
 }
 
 func TestCycleManager_timeout(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 5 * time.Millisecond
 	cycleDuration := 20 * time.Millisecond
 	stopTimeout := 12 * time.Millisecond
 
 	p := newProvider(cycleDuration, 1)
-	cm := NewMulti(NewFixedIntervalTicker(cycleInterval))
-	cm.Register(p.cycleFunc)
+	cm := NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+	cm.Register("cf", p.cycleFunc)
 
 	t.Run("timeout is reached", func(t *testing.T) {
 		timeoutCtx, cancel := context.WithTimeout(context.Background(), stopTimeout)
@@ -173,13 +177,14 @@ func TestCycleManager_timeout(t *testing.T) {
 }
 
 func TestCycleManager_timeoutWithWait(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 5 * time.Millisecond
 	cycleDuration := 20 * time.Millisecond
 	stopTimeout := 12 * time.Millisecond
 
 	p := newProvider(cycleDuration, 1)
-	cm := NewMulti(NewFixedIntervalTicker(cycleInterval))
-	cm.Register(p.cycleFunc)
+	cm := NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+	cm.Register("cf", p.cycleFunc)
 
 	t.Run("timeout is reached", func(t *testing.T) {
 		timeoutCtx, cancel := context.WithTimeout(context.Background(), stopTimeout)
@@ -204,14 +209,15 @@ func TestCycleManager_timeoutWithWait(t *testing.T) {
 }
 
 func TestCycleManager_doesNotStartMultipleTimes(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 5 * time.Millisecond
 	cycleDuration := 1 * time.Millisecond
 
 	startCount := 5
 
 	p := newProvider(cycleDuration, uint(startCount))
-	cm := NewMulti(NewFixedIntervalTicker(cycleInterval))
-	cm.Register(p.cycleFunc)
+	cm := NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+	cm.Register("cf", p.cycleFunc)
 
 	t.Run("multiple starts", func(t *testing.T) {
 		for i := 0; i < startCount; i++ {
@@ -229,14 +235,15 @@ func TestCycleManager_doesNotStartMultipleTimes(t *testing.T) {
 }
 
 func TestCycleManager_doesNotStartMultipleTimesWithWait(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 5 * time.Millisecond
 	cycleDuration := 1 * time.Millisecond
 
 	startCount := 5
 
 	p := newProvider(cycleDuration, uint(startCount))
-	cm := NewMulti(NewFixedIntervalTicker(cycleInterval))
-	cm.Register(p.cycleFunc)
+	cm := NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+	cm.Register("cf", p.cycleFunc)
 
 	t.Run("multiple starts", func(t *testing.T) {
 		for i := 0; i < startCount; i++ {
@@ -254,14 +261,15 @@ func TestCycleManager_doesNotStartMultipleTimesWithWait(t *testing.T) {
 }
 
 func TestCycleManager_handlesMultipleStops(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 5 * time.Millisecond
 	cycleDuration := 1 * time.Millisecond
 
 	stopCount := 5
 
 	p := newProvider(cycleDuration, 1)
-	cm := NewMulti(NewFixedIntervalTicker(cycleInterval))
-	cm.Register(p.cycleFunc)
+	cm := NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+	cm.Register("cf", p.cycleFunc)
 
 	t.Run("multiple stops", func(t *testing.T) {
 		cm.Start()
@@ -281,13 +289,14 @@ func TestCycleManager_handlesMultipleStops(t *testing.T) {
 }
 
 func TestCycleManager_stopsIfNotAllContextsAreCancelled(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 5 * time.Millisecond
 	cycleDuration := 1 * time.Millisecond
 	stopTimeout := 5 * time.Millisecond
 
 	p := newProvider(cycleDuration, 1)
-	cm := NewMulti(NewFixedIntervalTicker(cycleInterval))
-	cm.Register(p.cycleFunc)
+	cm := NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+	cm.Register("cf", p.cycleFunc)
 
 	t.Run("multiple stops, few cancelled", func(t *testing.T) {
 		timeout1Ctx, cancel1 := context.WithTimeout(context.Background(), stopTimeout)
@@ -313,13 +322,14 @@ func TestCycleManager_stopsIfNotAllContextsAreCancelled(t *testing.T) {
 }
 
 func TestCycleManager_doesNotStopIfAllContextsAreCancelled(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 50 * time.Millisecond
 	cycleDuration := 10 * time.Millisecond
 	stopTimeout := 50 * time.Millisecond
 
 	p := newProvider(cycleDuration, 1)
-	cm := NewMulti(NewFixedIntervalTicker(cycleInterval))
-	cm.Register(p.cycleFunc)
+	cm := NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+	cm.Register("cf", p.cycleFunc)
 
 	t.Run("multiple stops, few cancelled", func(t *testing.T) {
 		timeout1Ctx, cancel1 := context.WithTimeout(context.Background(), stopTimeout)
@@ -353,14 +363,15 @@ func TestCycleManager_doesNotStopIfAllContextsAreCancelled(t *testing.T) {
 }
 
 func TestCycleManager_cycleFuncStoppedDueToFrequentStopChecks(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 50 * time.Millisecond
 	cycleDuration := 300 * time.Millisecond
 	stopTimeout := 100 * time.Millisecond
 
 	// despite cycleDuration is 30ms, cycle function checks every 20ms (300/15) if it needs to be stopped
 	p := newProviderBreakable(cycleDuration, 1, 15)
-	cm := NewMulti(NewFixedIntervalTicker(cycleInterval))
-	cm.Register(p.cycleFunc)
+	cm := NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+	cm.Register("cf", p.cycleFunc)
 
 	t.Run("cycle funcion stopped before timeout reached", func(t *testing.T) {
 		timeoutCtx, cancel := context.WithTimeout(context.Background(), stopTimeout)
@@ -384,14 +395,15 @@ func TestCycleManager_cycleFuncStoppedDueToFrequentStopChecks(t *testing.T) {
 }
 
 func TestCycleManager_cycleFuncNotStoppedDueToRareStopChecks(t *testing.T) {
+	logger, _ := test.NewNullLogger()
 	cycleInterval := 50 * time.Millisecond
 	cycleDuration := 300 * time.Millisecond
 	stopTimeout := 100 * time.Millisecond
 
 	// despite cycleDuration is 30ms, cycle function checks every 150ms (300/2) if it needs to be stopped
 	p := newProviderBreakable(cycleDuration, 1, 2)
-	cm := NewMulti(NewFixedIntervalTicker(cycleInterval))
-	cm.Register(p.cycleFunc)
+	cm := NewMulti(NewFixedIntervalTicker(cycleInterval), logger)
+	cm.Register("cf", p.cycleFunc)
 
 	t.Run("timeout reached", func(t *testing.T) {
 		timeoutCtx, cancel := context.WithTimeout(context.Background(), stopTimeout)

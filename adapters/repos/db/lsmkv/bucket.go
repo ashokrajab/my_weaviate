@@ -157,7 +157,7 @@ func NewBucket(ctx context.Context, dir, rootDir string, logger logrus.FieldLogg
 		return nil, err
 	}
 
-	b.unregisterFlush = flushCycle.Register(b.flushAndSwitchIfThresholdsMet)
+	b.unregisterFlush = flushCycle.Register("flushCycle_"+b.dir, b.flushAndSwitchIfThresholdsMet)
 
 	b.metrics.TrackStartupBucket(beforeAll)
 

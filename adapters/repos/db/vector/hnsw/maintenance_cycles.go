@@ -16,15 +16,21 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/weaviate/weaviate/entities/cyclemanager"
 	"github.com/weaviate/weaviate/entities/errorcompounder"
 )
 
 type MaintenanceCycles struct {
+	sync.Mutex
+
+	logger               logrus.FieldLogger
 	commitLogMaintenance cyclemanager.CycleManager
 	tombstoneCleanup     cyclemanager.CycleManager
+}
 
-	lock sync.Mutex
+func NewMaintenanceCycles(logger logrus.FieldLogger) *MaintenanceCycles {
+	return &MaintenanceCycles{logger: logger}
 }
 
 // Creates internal cycle managers and immediately starts them.
@@ -35,12 +41,12 @@ func (c *MaintenanceCycles) Init(
 	commitlogMaintenanceTicker cyclemanager.CycleTicker,
 	tombstoneCleanupTicker cyclemanager.CycleTicker,
 ) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	if !c.initedUnlocked() {
-		c.commitLogMaintenance = cyclemanager.NewMulti(commitlogMaintenanceTicker)
-		c.tombstoneCleanup = cyclemanager.NewMulti(tombstoneCleanupTicker)
+		c.commitLogMaintenance = cyclemanager.NewMulti(commitlogMaintenanceTicker, c.logger)
+		c.tombstoneCleanup = cyclemanager.NewMulti(tombstoneCleanupTicker, c.logger)
 
 		c.commitLogMaintenance.Start()
 		c.tombstoneCleanup.Start()
@@ -120,8 +126,8 @@ func (c *MaintenanceCycles) Shutdown(ctx context.Context) error {
 }
 
 func (c *MaintenanceCycles) inited() bool {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	return c.initedUnlocked()
 }

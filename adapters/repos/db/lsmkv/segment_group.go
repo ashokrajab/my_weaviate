@@ -131,7 +131,7 @@ func newSegmentGroup(dir string, logger logrus.FieldLogger,
 		out.metrics.ObjectCount(out.count())
 	}
 
-	out.unregisterCompaction = compactionCycleManager.Register(out.compactIfLevelsMatch)
+	out.unregisterCompaction = compactionCycleManager.Register("compaction_"+out.dir, out.compactIfLevelsMatch)
 
 	return out, nil
 }
