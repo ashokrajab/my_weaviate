@@ -139,14 +139,14 @@ func (u *unzip) ReadRegulars() (written int64, err error) {
 			if pp := filepath.Dir(target); pp != parentPath {
 				parentPath = pp
 
-				fmt.Println(parentPath)
-				fmt.Println("----------------------------------------------------------------")
+				//fmt.Println(parentPath)
+				//fmt.Println("----------------------------------------------------------------")
 
 				if err := os.MkdirAll(parentPath, 0o755); err != nil {
 					return written, fmt.Errorf("crateDir %s: %w", target, err)
 				}
 			}
-			fmt.Println("+", target)
+			//fmt.Println("+", target)
 			n, err := copyFile(target, header, u.r)
 			if err != nil {
 				return written, fmt.Errorf("copy file %s: %w", target, err)
